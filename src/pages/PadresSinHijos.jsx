@@ -45,7 +45,7 @@ const Padressinhijos = () => {
                   </div>
                   <div>
                     <span>Género</span>
-                    <span>{file.genero}</span>
+                    <span>{file.genero === 1 ? "F" : "M"}</span>
                   </div>
             </li>
           );
