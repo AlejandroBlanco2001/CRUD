@@ -172,6 +172,7 @@ export const Hijos = () => {
               onChange={(e) => setFechaNacimiento(e.target.value)}
               name="fechaNacimiento"
               placeholder="Seleccione una fecha"
+              disabled={needUpdate}
             />
           </div>
           <div>
@@ -183,6 +184,8 @@ export const Hijos = () => {
                 let genero = e.target.value;
                 setGenero(genero === "Masculino" ? 0 : 1);
               }}
+              disabled={needUpdate}
+              value={updatedUser.genero == "M" ? "Masculino" : "Femenino"}
             >
               <option value="Masculino">Masculino</option>
               <option value="Femenino">Femenino</option>
@@ -197,6 +200,7 @@ export const Hijos = () => {
             onChange={(e) => {
               setHijoDe(e.target.value);
             }}
+            value={updatedUser.hijode || ","}
           >
             <option value="">Sin padre</option>
             {padres ? (

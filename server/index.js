@@ -1,69 +1,30 @@
 const express = require("express");
 const app = express();
 const mariadb = require("mariadb");
-const querySelector = require("./querys")
-
 const cors = require("cors");
+
+const inserts = require("./inserts");
+const updates = require("./updates");
+const deletes = require("./deletes");
+const querySelector = require("./querys");
+
+app.use(cors());
+app.use(express.json());
+
+const port = 3004;
 
 const config = mariadb.createPool({
   host: "localhost",
   user: "root",
-  password: "Dhit27979781",
+  password: "Josemicod5",
   database: "icbf",
   connectionLimit: 5,
   acquireTimeout: 300,
 });
 
-async function updatePadre(primaryKey, data) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const results = await conn.query(
-      `UPDATE padre SET primerNombre = ?, segundoNombre = ? , apellido = ?, genero = ? , direccion = ?, ciudad = ?, fechaNacimiento = ? WHERE cedula = ${primaryKey.toString()};`,
-      data
-    );
-
-    conn.end();
-    return results;
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function updateHijo(primaryKey, data) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const results = await conn.query(
-      `UPDATE hijo SET primerNombre = ?, segundoNombre = ? , genero = ? , fechaNacimiento = ?, hijoDe = ? WHERE tarjetaIdentidad = ${primaryKey.toString()};`,
-      data
-    );
-
-    conn.end();
-    return results;
-  } catch (error) {
-    throw error;
-  }
-}
-
-const { default: axios } = require("axios");
-
-const port = 3004;
-
-app.use(cors());
-app.use(express.json());
-
 app.post("/crearpadre", (req, res) => {
-  const primerNombre = req.body.primerNombre;
-  const segundoNombre = req.body.segundoNombre;
-  const apellido = req.body.apellido;
-  const genero = req.body.genero;
-  const direccion = req.body.direccion;
-  const ciudad = req.body.ciudad;
-  const fechaNacimiento = req.body.fechaNacimiento;
-  const cedula = req.body.cedula;
-
-  const response = insertData(
+  const {primerNombre, segundoNombre, apellido, genero, direccion, ciudad, fechaNacimiento, cedula} = req.body;
+  const response = inserts.insertPadre(config,
     "padre(cedula, primerNombre, segundoNombre, apellido, genero, direccion, ciudad, fechaNacimiento)",
     [
       cedula,
@@ -87,55 +48,8 @@ app.post("/crearpadre", (req, res) => {
     });
 });
 
-async function insertHijo(table, values) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const res = await conn.query(
-      `INSERT INTO ${table} VALUES (?,?,?,?,?,?)`,
-      values
-    );
-    conn.end();
-    return res;
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function deletePadre(cedula) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const result = await conn.query(
-      `DELETE FROM padre WHERE cedula = ${cedula.toString()}`,
-      
-    );
-    conn.end();
-    return result;
-  } catch (error) {
-   
-  }
-}
-
-async function deleteHijo(tarjetaIdentidad) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const result = await conn.query(
-      `DELETE FROM hijo WHERE tarjetaIdentidad = ${tarjetaIdentidad.toString()}`,
-      
-    );
-    conn.end();
-    return result;
-  } catch (error) {
-   
-  }
-}
-
-
 app.get("/:name(c1|c2|c3)", (req,res) => {
-  var type = req.params.name[1];
-  const results = getQuery(type);
+  const results = querySelector.getQuery(config,req.params.name[1]);
   results
     .then((data) =>{
       res.send(data);
@@ -157,7 +71,7 @@ app.post("/crearhijo", (req, res) => {
     fechaNacimiento,
   } = req.body;
 
-  const response = insertHijo(
+  const response = inserts.insertHijo(config,
     "hijo(tarjetaIdentidad, primerNombre, segundoNombre, genero, fechaNacimiento, hijode)",
     [
       tarjetaIdentidad,
@@ -179,18 +93,18 @@ app.post("/crearhijo", (req, res) => {
 });
 
 app.put("/update", (req, res) => {
+  let genero;
   const {
-    cedula,
     primerNombre,
     segundoNombre,
     apellido,
-    genero,
     direccion,
     ciudad,
     fechaNacimiento,
     updatedUser,
   } = req.body;
-  updatePadre(updatedUser.cedula.toString(), [
+  genero = genero == "M" ? 0 : 1;
+  updates.updatePadre(config,updatedUser.cedula.toString(), [
     primerNombre,
     segundoNombre,
     apellido,
@@ -211,16 +125,16 @@ app.put("/update", (req, res) => {
 });
 
 app.put("/updateHijo", (req, res) => {
+  let genero;
   const {
-    tarjetaIdentidad,
     primerNombre,
     segundoNombre,
-    genero,
     hijode,
     fechaNacimiento,
     updatedUser,
   } = req.body;
-  updateHijo(updatedUser.tarjetaIdentidad.toString(), [
+  genero = genero = "M" ? 1 : 0;
+  updates.updateHijo(config,updatedUser.tarjetaIdentidad.toString(), [
     primerNombre,
     segundoNombre,
     genero,
@@ -239,9 +153,10 @@ app.put("/updateHijo", (req, res) => {
 });
 
 app.get("/padres", (req, res) => {
-  const results = getData("padre");
+  const results = querySelector.getData(config,"padre");
   results
     .then((data) => {
+      Array.from(data).forEach((item) => item["genero"] = item["genero"] == 0 ? "M" : "F");
       res.send(data);
     })
     .catch((error) => {
@@ -253,7 +168,7 @@ app.get("/padres", (req, res) => {
 
 app.get("/padres/:cedula", (req, res) => {
   const cedula = req.params.cedula;
-  const results = getDataC1("hijo",cedula);
+  const results = querySelector.getDataC1(config,"hijo",cedula);
   results
     .then((data) => {
       res.send(data);
@@ -265,9 +180,10 @@ app.get("/padres/:cedula", (req, res) => {
   });
 
 app.get("/hijos", (req, res) => {
-  const results = getData("hijo");
+  const results = querySelector.getData(config,"hijo");
   results
     .then((data) => {
+      Array.from(data).forEach((item) => item["genero"] = item["genero"] == 0 ? "M" : "F");
       res.send(data);
     })
     .catch((error) => {
@@ -278,9 +194,8 @@ app.get("/hijos", (req, res) => {
 });
 
 app.delete("/deletepadre/:cedula", (req, res) => {
-  console.log("ENTRE");
   const cedula = req.params.cedula;
-  const response = deletePadre(cedula);
+  const response = deletes.deletePadre(config,cedula);
   response
     .then((result) => {
       console.log("ELIMINADO CORRECTAMENTE EL PADRE: ", cedula);
@@ -296,7 +211,7 @@ app.delete("/deletepadre/:cedula", (req, res) => {
 app.delete("/deletehijo/:tarjetaIdentidad", (req, res) => {
   console.log("ENTRE");
   const tarjetaIdentidad = req.params.tarjetaIdentidad;
-  const response = deleteHijo(tarjetaIdentidad);
+  const response = deletes.deleteHijo(config,tarjetaIdentidad);
   response
     .then((result) => {
       console.log("ELIMINADO CORRECTAMENTE EL PADRE: ", tarjetaIdentidad);
@@ -312,53 +227,3 @@ app.delete("/deletehijo/:tarjetaIdentidad", (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
-async function getData(table) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const rows = await conn.query(`SELECT * FROM ${table}`);
-    conn.end();
-    return rows;
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function getDataC1(table,cedula) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const rows = await conn.query(`SELECT * FROM ${table} WHERE hijode = ${cedula.toString()}`);
-    conn.end();
-    return rows;
-  } catch (error) {}
-}
-
-async function getQuery(type){
-  let conn;
-  try{
-    conn = await config.getConnection();
-    const rows = await conn.query(querySelector(type))
-    conn.end();
-    return rows;
-  }catch(error){
-    throw error;
-  }
-}
-
-
-async function insertData(table, values) {
-  let conn;
-  try {
-    conn = await config.getConnection();
-    const res = await conn.query(
-      `INSERT INTO ${table} VALUES (?,?,?,?,?,?,?,?)`,
-      values
-    );
-    conn.end();
-    return res;
-  } catch (error) {
-    throw error
-  }
-}

@@ -70,7 +70,10 @@ export const Padres = () => {
         ]);
         window.location.reload(false);
       })
-      .catch((er) => console.log(er));
+      .catch((er) =>{
+        alert("Disculpe esta ingresando un usuario ya existente")
+        console.log(er)
+      });
   };
 
   const updatePadre = () => {
@@ -87,7 +90,6 @@ export const Padres = () => {
     }).then((response) => {
       window.location.reload(false);
       reload();
-     
     });
   };
 
@@ -181,6 +183,7 @@ export const Padres = () => {
               onChange={(e) => setFechaNacimiento(e.target.value)}
               name="fechaNacimiento"
               placeholder="Seleccione una fecha"
+              disabled={needUpdate}
             />
           </div>
           <div>
@@ -192,6 +195,8 @@ export const Padres = () => {
                 let genero = e.target.value;
                 setGenero(genero === "Masculino" ? 0 : 1);
               }}
+              value={updatedUser.genero == "F" ? "Femenino" : "Masculino"}
+              disabled={needUpdate}
             >
               <option value="Masculino">Masculino</option>
               <option value="Femenino">Femenino</option>
@@ -206,7 +211,7 @@ export const Padres = () => {
           disabled={!needUpdate}
           type="button"
         >
-          ACTUALIZAR
+        ACTUALIZAR
         </button>
         <img src={background} alt="" className="background" />
       </form>
